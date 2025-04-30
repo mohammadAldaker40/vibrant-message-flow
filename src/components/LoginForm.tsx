@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface LoginFormProps {
   onLogin: (username: string, password: string) => void;
@@ -24,6 +26,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
   
   const [registerError, setRegisterError] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +36,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
       return;
     }
     
-    // In a real app, we would validate credentials
-    onLogin(loginUsername, loginPassword);
+    try {
+      onLogin(loginUsername, loginPassword);
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Login failed');
+    }
   };
   
   const handleRegister = (e: React.FormEvent) => {
@@ -51,8 +57,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
       return;
     }
     
-    // In a real app, we would validate the email, check password strength, etc.
-    onRegister(registerUsername, registerEmail, registerPassword);
+    try {
+      onRegister(registerUsername, registerEmail, registerPassword);
+      setRegistrationSubmitted(true);
+    } catch (error) {
+      setRegisterError(error instanceof Error ? error.message : 'Registration failed');
+    }
   };
   
   return (
@@ -102,9 +112,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
                   <div className="grid gap-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password">Password</Label>
-                      <a href="#" className="text-xs text-primary hover:underline">
-                        Forgot password?
-                      </a>
                     </div>
                     <Input 
                       id="password" 
@@ -116,66 +123,94 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
                     />
                   </div>
                   {loginError && (
-                    <div className="text-sm text-red-500">{loginError}</div>
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        {loginError}
+                      </AlertDescription>
+                    </Alert>
                   )}
+                  <div className="text-sm text-muted-foreground mt-2">
+                    <p>Admin credentials: username: <strong>admin</strong>, password: <strong>admin</strong></p>
+                  </div>
                   <Button type="submit" className="w-full">Log In</Button>
                 </div>
               </form>
             </TabsContent>
             
             <TabsContent value="register">
-              <form onSubmit={handleRegister}>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="register-username">Username</Label>
-                    <Input 
-                      id="register-username" 
-                      type="text" 
-                      value={registerUsername}
-                      onChange={e => setRegisterUsername(e.target.value)}
-                      placeholder="Choose a username" 
-                      required 
-                    />
+              {registrationSubmitted ? (
+                <Alert className="bg-amber-50 text-amber-800 border-amber-200">
+                  <AlertDescription className="text-center py-4">
+                    <h3 className="font-bold text-lg mb-2">Registration Request Submitted</h3>
+                    <p>Your request has been sent to the administrator for approval.</p>
+                    <p className="mt-2">You will be able to log in once your request has been approved.</p>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <form onSubmit={handleRegister}>
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="register-username">Username</Label>
+                      <Input 
+                        id="register-username" 
+                        type="text" 
+                        value={registerUsername}
+                        onChange={e => setRegisterUsername(e.target.value)}
+                        placeholder="Choose a username" 
+                        required 
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="register-email">Email</Label>
+                      <Input 
+                        id="register-email" 
+                        type="email" 
+                        value={registerEmail}
+                        onChange={e => setRegisterEmail(e.target.value)}
+                        placeholder="Enter your email" 
+                        required 
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="register-password">Password</Label>
+                      <Input 
+                        id="register-password" 
+                        type="password" 
+                        value={registerPassword}
+                        onChange={e => setRegisterPassword(e.target.value)}
+                        placeholder="Choose a password" 
+                        required 
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="register-confirm-password">Confirm Password</Label>
+                      <Input 
+                        id="register-confirm-password" 
+                        type="password" 
+                        value={registerConfirmPassword}
+                        onChange={e => setRegisterConfirmPassword(e.target.value)}
+                        placeholder="Confirm your password" 
+                        required 
+                      />
+                    </div>
+                    {registerError && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          {registerError}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+                      <AlertDescription>
+                        Registration requires administrator approval.
+                      </AlertDescription>
+                    </Alert>
+                    <Button type="submit" className="w-full">Register</Button>
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="register-email">Email</Label>
-                    <Input 
-                      id="register-email" 
-                      type="email" 
-                      value={registerEmail}
-                      onChange={e => setRegisterEmail(e.target.value)}
-                      placeholder="Enter your email" 
-                      required 
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="register-password">Password</Label>
-                    <Input 
-                      id="register-password" 
-                      type="password" 
-                      value={registerPassword}
-                      onChange={e => setRegisterPassword(e.target.value)}
-                      placeholder="Choose a password" 
-                      required 
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="register-confirm-password">Confirm Password</Label>
-                    <Input 
-                      id="register-confirm-password" 
-                      type="password" 
-                      value={registerConfirmPassword}
-                      onChange={e => setRegisterConfirmPassword(e.target.value)}
-                      placeholder="Confirm your password" 
-                      required 
-                    />
-                  </div>
-                  {registerError && (
-                    <div className="text-sm text-red-500">{registerError}</div>
-                  )}
-                  <Button type="submit" className="w-full">Register</Button>
-                </div>
-              </form>
+                </form>
+              )}
             </TabsContent>
           </CardContent>
         </Tabs>

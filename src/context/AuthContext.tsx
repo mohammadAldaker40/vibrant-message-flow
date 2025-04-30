@@ -1,14 +1,18 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User } from '../types';
+import { User, RegistrationRequest } from '../types';
 import { currentUser } from '../data/mockData';
+import { toast } from "@/hooks/use-toast";
 
 interface AuthContextProps {
   user: User | null;
   isAuthenticated: boolean;
+  pendingRegistrations: RegistrationRequest[];
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  approveRegistration: (id: string) => void;
+  rejectRegistration: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -17,80 +21,166 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Create admin user
+const adminUser: User = {
+  id: 'admin-1',
+  username: 'admin',
+  avatar: 'https://i.pravatar.cc/150?u=admin',
+  isOnline: true,
+  isAdmin: true
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pendingRegistrations, setPendingRegistrations] = useState<RegistrationRequest[]>([]);
   
-  // Check if the user is already logged in from localStorage
+  // Clear any existing user data on load and set admin as default
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('user');
-      }
-    }
+    localStorage.removeItem('user');
+    // You can uncomment this to auto-login as admin for testing
+    // setUser(adminUser);
+    // setIsAuthenticated(true);
+    // localStorage.setItem('user', JSON.stringify(adminUser));
   }, []);
   
   const login = async (username: string, password: string): Promise<void> => {
-    // In a real app, we'd validate credentials against an API
-    // For demo purposes, we'll just accept any login
     try {
       // Simple validation
       if (!username || !password) {
         throw new Error('Username and password are required');
       }
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Admin login
+      if (username === 'admin' && password === 'admin') {
+        setUser(adminUser);
+        setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        return;
+      }
       
-      // Use mock user data
-      setUser(currentUser);
+      // Regular user login - check if user is approved
+      const storedRegistrations = localStorage.getItem('pendingRegistrations');
+      const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+      
+      const approvedUser = registrations.find(
+        reg => reg.username === username && reg.status === 'approved'
+      );
+      
+      if (!approvedUser) {
+        throw new Error('Invalid credentials or your registration has not been approved yet');
+      }
+      
+      // Create user from approved registration
+      const loggedInUser: User = {
+        id: approvedUser.id,
+        username: approvedUser.username,
+        avatar: `https://i.pravatar.cc/150?u=${approvedUser.username}`,
+        isOnline: true,
+        isApproved: true
+      };
+      
+      setUser(loggedInUser);
       setIsAuthenticated(true);
-      
-      // Store user info in localStorage for persistence
-      localStorage.setItem('user', JSON.stringify(currentUser));
+      localStorage.setItem('user', JSON.stringify(loggedInUser));
       
     } catch (error) {
       console.error('Login failed:', error);
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
       throw error;
     }
   };
   
   const register = async (username: string, email: string, password: string): Promise<void> => {
-    // In a real app, we'd send registration data to an API
     try {
       // Simple validation
       if (!username || !email || !password) {
         throw new Error('All fields are required');
       }
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create a new user (in a real app, this would come from the API)
-      const newUser: User = {
+      // Create a registration request
+      const newRegistration: RegistrationRequest = {
         id: `user-${Date.now()}`,
         username,
-        avatar: `https://i.pravatar.cc/150?u=${username}`,
-        isOnline: true,
+        email,
+        timestamp: Date.now(),
+        status: 'pending'
       };
       
-      // Log the user in automatically after registration
-      setUser(newUser);
-      setIsAuthenticated(true);
+      // Store registration request
+      const storedRegistrations = localStorage.getItem('pendingRegistrations');
+      const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
       
-      // Store user info in localStorage
-      localStorage.setItem('user', JSON.stringify(newUser));
+      // Check if username or email already exists
+      if (registrations.some(reg => reg.username === username)) {
+        throw new Error('Username already exists');
+      }
+      
+      if (registrations.some(reg => reg.email === email)) {
+        throw new Error('Email already exists');
+      }
+      
+      // Add new registration
+      const updatedRegistrations = [...registrations, newRegistration];
+      localStorage.setItem('pendingRegistrations', JSON.stringify(updatedRegistrations));
+      setPendingRegistrations(updatedRegistrations);
+      
+      toast({
+        title: "Registration pending",
+        description: "Your registration request has been submitted. An administrator will review your request.",
+      });
       
     } catch (error) {
       console.error('Registration failed:', error);
+      toast({
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
       throw error;
     }
+  };
+  
+  const approveRegistration = (id: string) => {
+    if (!user?.isAdmin) return;
+    
+    const storedRegistrations = localStorage.getItem('pendingRegistrations');
+    const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+    
+    const updatedRegistrations = registrations.map(reg => 
+      reg.id === id ? { ...reg, status: 'approved' } : reg
+    );
+    
+    localStorage.setItem('pendingRegistrations', JSON.stringify(updatedRegistrations));
+    setPendingRegistrations(updatedRegistrations);
+    
+    toast({
+      title: "Registration approved",
+      description: "User can now log in to the system",
+    });
+  };
+  
+  const rejectRegistration = (id: string) => {
+    if (!user?.isAdmin) return;
+    
+    const storedRegistrations = localStorage.getItem('pendingRegistrations');
+    const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+    
+    const updatedRegistrations = registrations.map(reg => 
+      reg.id === id ? { ...reg, status: 'rejected' } : reg
+    );
+    
+    localStorage.setItem('pendingRegistrations', JSON.stringify(updatedRegistrations));
+    setPendingRegistrations(updatedRegistrations);
+    
+    toast({
+      title: "Registration rejected",
+      description: "User registration has been rejected",
+    });
   };
   
   const logout = () => {
@@ -100,13 +190,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('user');
   };
   
+  // Load pending registrations for admin
+  useEffect(() => {
+    if (user?.isAdmin) {
+      const storedRegistrations = localStorage.getItem('pendingRegistrations');
+      if (storedRegistrations) {
+        setPendingRegistrations(JSON.parse(storedRegistrations));
+      }
+    }
+  }, [user]);
+  
   return (
     <AuthContext.Provider value={{ 
       user, 
       isAuthenticated, 
       login, 
       register, 
-      logout 
+      logout,
+      pendingRegistrations,
+      approveRegistration,
+      rejectRegistration
     }}>
       {children}
     </AuthContext.Provider>

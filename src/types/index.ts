@@ -4,6 +4,8 @@ export interface User {
   username: string;
   avatar: string;
   isOnline: boolean;
+  isAdmin?: boolean;
+  isApproved?: boolean;
 }
 
 export interface Message {
@@ -25,4 +27,12 @@ export interface Conversation {
   groupName?: string;
   groupAvatar?: string;
   typing?: boolean;
+}
+
+export interface RegistrationRequest {
+  id: string;
+  username: string;
+  email: string;
+  timestamp: number;
+  status: 'pending' | 'approved' | 'rejected';
 }

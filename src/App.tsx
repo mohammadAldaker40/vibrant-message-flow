@@ -9,13 +9,26 @@ import { SocketProvider } from "./context/SocketContext";
 import { conversations, messages } from "./data/mockData";
 import Chat from "./pages/Chat";
 import LoginForm from "./components/LoginForm";
+import AdminPanel from "./pages/AdminPanel";
 
 const queryClient = new QueryClient();
 
 // Protected route component
-const ProtectedRoute: React.FC<{ element: React.ReactNode }> = ({ element }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{element}</> : <Navigate to="/login" />;
+const ProtectedRoute: React.FC<{ element: React.ReactNode; adminOnly?: boolean }> = ({ 
+  element, 
+  adminOnly = false 
+}) => {
+  const { isAuthenticated, user } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (adminOnly && !user?.isAdmin) {
+    return <Navigate to="/chat" />;
+  }
+  
+  return <>{element}</>;
 };
 
 // Auth routes component
@@ -30,7 +43,8 @@ const AuthRoutes: React.FC = () => {
         currentUser={user}
       >
         <Routes>
-          <Route path="/" element={<ProtectedRoute element={<Chat />} />} />
+          <Route path="/" element={<Navigate to="/chat" />} />
+          <Route path="/admin" element={<ProtectedRoute element={<AdminPanel />} adminOnly={true} />} />
           <Route path="/chat" element={<ProtectedRoute element={<Chat />} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
