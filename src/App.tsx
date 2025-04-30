@@ -1,12 +1,53 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
+import { conversations, messages } from "./data/mockData";
+import Chat from "./pages/Chat";
+import LoginForm from "./components/LoginForm";
 
 const queryClient = new QueryClient();
+
+// Protected route component
+const ProtectedRoute: React.FC<{ element: React.ReactNode }> = ({ element }) => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <>{element}</> : <Navigate to="/login" />;
+};
+
+// Auth routes component
+const AuthRoutes: React.FC = () => {
+  const { isAuthenticated, login, register, user } = useAuth();
+
+  if (isAuthenticated && user) {
+    return (
+      <SocketProvider
+        initialConversations={conversations}
+        initialMessages={messages}
+        currentUser={user}
+      >
+        <Routes>
+          <Route path="/" element={<ProtectedRoute element={<Chat />} />} />
+          <Route path="/chat" element={<ProtectedRoute element={<Chat />} />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </SocketProvider>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={<LoginForm onLogin={login} onRegister={register} />}
+      />
+      <Route path="*" element={<Navigate to="/login" />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -14,11 +55,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <AuthRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
