@@ -5,12 +5,14 @@ import ChatArea from '../components/ChatArea';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Users } from 'lucide-react';
 import Avatar from '../components/Avatar';
+import { useNavigate } from 'react-router-dom';
 
 const Chat: React.FC = () => {
   const { user, logout } = useAuth();
   const { conversations, messages, sendMessage, startTyping, stopTyping } = useSocket();
+  const navigate = useNavigate();
   
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const activeConversation = conversations.find(c => c.id === activeConversationId) || null;
@@ -46,14 +48,28 @@ const Chat: React.FC = () => {
             <Avatar src={user.avatar} alt={user.username} status="online" size="sm" />
             <h3 className="ml-2 font-medium text-white">{user.username}</h3>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={logout} 
-            className="text-gray-300 hover:text-white hover:bg-slate-700"
-          >
-            <LogOut size={20} />
-          </Button>
+          <div className="flex">
+            {user.isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate('/admin')} 
+                className="text-gray-300 hover:text-white hover:bg-slate-700 mr-1"
+                title="Admin Panel"
+              >
+                <Users size={20} />
+              </Button>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={logout} 
+              className="text-gray-300 hover:text-white hover:bg-slate-700"
+              title="Logout"
+            >
+              <LogOut size={20} />
+            </Button>
+          </div>
         </div>
         
         {/* Conversations */}
@@ -68,12 +84,31 @@ const Chat: React.FC = () => {
       
       {/* Chat Area */}
       <div className="flex-grow h-full">
-        <ChatArea
-          conversation={activeConversation}
-          messages={activeMessages}
-          currentUser={user}
-          onSendMessage={handleSendMessage}
-        />
+        {activeConversation ? (
+          <ChatArea
+            conversation={activeConversation}
+            messages={activeMessages}
+            currentUser={user}
+            onSendMessage={handleSendMessage}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+            <div className="text-center p-6">
+              <h3 className="text-xl font-medium text-gray-700 dark:text-gray-200 mb-2">
+                No conversations yet
+              </h3>
+              {user.isAdmin ? (
+                <p className="text-gray-500 dark:text-gray-400">
+                  Approve user registrations in the admin panel<br />to start conversations
+                </p>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">
+                  Wait for other approved users to join
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Message, Conversation, User } from '../types';
 
@@ -34,11 +33,49 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
     // In a real app, we'd connect to a socket server
     console.log('Socket connected');
     
+    // Load approved users from storage and create conversations if needed
+    const loadApprovedUsers = () => {
+      const storedRegistrations = localStorage.getItem('pendingRegistrations');
+      if (storedRegistrations) {
+        try {
+          const rawRegistrations = JSON.parse(storedRegistrations);
+          
+          // Filter only approved users
+          const approvedUsers = rawRegistrations
+            .filter((reg: any) => reg.status === 'approved')
+            .map((reg: any) => ({
+              id: reg.id,
+              username: reg.username,
+              avatar: `https://i.pravatar.cc/150?u=${reg.username}`,
+              isOnline: false,
+              isApproved: true
+            }));
+          
+          // Create conversations for each approved user
+          if (approvedUsers.length > 0) {
+            const newConversations = approvedUsers.map((user: User) => ({
+              id: `conversation-${user.id}`,
+              participants: [currentUser, user],
+              unreadCount: 0,
+              isGroup: false,
+              typing: false
+            }));
+            
+            setConversations(newConversations);
+          }
+        } catch (error) {
+          console.error('Error loading approved users:', error);
+        }
+      }
+    };
+    
+    loadApprovedUsers();
+    
     return () => {
       // In a real app, we'd disconnect from the socket server
       console.log('Socket disconnected');
     };
-  }, []);
+  }, [currentUser]);
   
   // Send a message
   const sendMessage = (
