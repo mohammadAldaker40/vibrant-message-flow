@@ -61,7 +61,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Regular user login - check if user is approved
       const storedRegistrations = localStorage.getItem('pendingRegistrations');
-      const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+      const rawRegistrations = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+      
+      // Type-cast the status to ensure it matches the expected type
+      const registrations: RegistrationRequest[] = rawRegistrations.map((reg: any) => ({
+        ...reg,
+        status: reg.status as "pending" | "approved" | "rejected"
+      }));
       
       const approvedUser = registrations.find(
         reg => reg.username === username && reg.status === 'approved'
@@ -113,7 +119,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Store registration request
       const storedRegistrations = localStorage.getItem('pendingRegistrations');
-      const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+      const rawRegistrations = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+      
+      // Type-cast the status to ensure it matches the expected type
+      const registrations: RegistrationRequest[] = rawRegistrations.map((reg: any) => ({
+        ...reg,
+        status: reg.status as "pending" | "approved" | "rejected"
+      }));
       
       // Check if username or email already exists
       if (registrations.some(reg => reg.username === username)) {
@@ -149,10 +161,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user?.isAdmin) return;
     
     const storedRegistrations = localStorage.getItem('pendingRegistrations');
-    const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+    const rawRegistrations = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+    
+    // Type-cast the status to ensure it matches the expected type
+    const registrations: RegistrationRequest[] = rawRegistrations.map((reg: any) => ({
+      ...reg,
+      status: reg.status as "pending" | "approved" | "rejected"
+    }));
     
     const updatedRegistrations = registrations.map(reg => 
-      reg.id === id ? { ...reg, status: 'approved' } : reg
+      reg.id === id ? { ...reg, status: 'approved' as const } : reg
     );
     
     localStorage.setItem('pendingRegistrations', JSON.stringify(updatedRegistrations));
@@ -168,10 +186,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user?.isAdmin) return;
     
     const storedRegistrations = localStorage.getItem('pendingRegistrations');
-    const registrations: RegistrationRequest[] = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+    const rawRegistrations = storedRegistrations ? JSON.parse(storedRegistrations) : [];
+    
+    // Type-cast the status to ensure it matches the expected type
+    const registrations: RegistrationRequest[] = rawRegistrations.map((reg: any) => ({
+      ...reg,
+      status: reg.status as "pending" | "approved" | "rejected"
+    }));
     
     const updatedRegistrations = registrations.map(reg => 
-      reg.id === id ? { ...reg, status: 'rejected' } : reg
+      reg.id === id ? { ...reg, status: 'rejected' as const } : reg
     );
     
     localStorage.setItem('pendingRegistrations', JSON.stringify(updatedRegistrations));
@@ -195,7 +219,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (user?.isAdmin) {
       const storedRegistrations = localStorage.getItem('pendingRegistrations');
       if (storedRegistrations) {
-        setPendingRegistrations(JSON.parse(storedRegistrations));
+        const rawRegistrations = JSON.parse(storedRegistrations);
+        
+        // Type-cast the status to ensure it matches the expected type
+        const registrations: RegistrationRequest[] = rawRegistrations.map((reg: any) => ({
+          ...reg,
+          status: reg.status as "pending" | "approved" | "rejected"
+        }));
+        
+        setPendingRegistrations(registrations);
       }
     }
   }, [user]);
