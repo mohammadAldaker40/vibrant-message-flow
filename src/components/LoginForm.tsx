@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -130,9 +129,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegister }) => {
                       </AlertDescription>
                     </Alert>
                   )}
-                  <div className="text-sm text-muted-foreground mt-2">
-                    <p>Admin credentials: username: <strong>admin</strong>, password: <strong>admin</strong></p>
-                  </div>
                   <Button type="submit" className="w-full">Log In</Button>
                 </div>
               </form>
