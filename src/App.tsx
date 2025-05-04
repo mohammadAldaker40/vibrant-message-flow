@@ -12,7 +12,7 @@ import LoginForm from "./components/LoginForm";
 import AdminPanel from "./pages/AdminPanel";
 import SettingsPage from "./pages/Settings";
 import { useEffect, useState } from "react";
-import { connectToMongo } from "./services/mongodb";
+import browserDb from "./services/browserDb";
 import { toast } from "./hooks/use-toast";
 
 const queryClient = new QueryClient();
@@ -40,35 +40,35 @@ const AuthRoutes: React.FC = () => {
   const { isAuthenticated, login, register, user } = useAuth();
   const [dbConnected, setDbConnected] = useState(false);
   
-  // Initialize MongoDB connection
+  // Initialize database connection
   useEffect(() => {
-    const initMongoDB = async () => {
+    const initDb = async () => {
       try {
-        const connected = await connectToMongo();
+        const connected = await browserDb.initialize();
         setDbConnected(connected);
         if (connected) {
           toast({
             title: "Database connected",
-            description: "Successfully connected to MongoDB on localhost:27017",
+            description: "Successfully connected to local database",
           });
         } else {
           toast({
             title: "Database connection failed",
-            description: "Failed to connect to MongoDB. Falling back to local storage.",
+            description: "Failed to connect to database. Falling back to local storage.",
             variant: "destructive"
           });
         }
       } catch (error) {
-        console.error('MongoDB connection error:', error);
+        console.error('Database initialization error:', error);
         toast({
           title: "Database error",
-          description: "Could not connect to MongoDB. Please ensure MongoDB is running on localhost:27017.",
+          description: "Could not initialize database. Using fallback storage.",
           variant: "destructive"
         });
       }
     };
     
-    initMongoDB();
+    initDb();
   }, []);
 
   if (isAuthenticated && user) {

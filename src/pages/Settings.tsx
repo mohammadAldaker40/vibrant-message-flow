@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -33,7 +32,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Save, UserRound, Settings as SettingsIcon, Loader2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import { saveUser, updateUserSettings } from '../services/mongodb';
+import browserDb from '../services/browserDb';
 
 const SettingsPage: React.FC = () => {
   const { user, isAuthenticated, updateUser } = useAuth();
@@ -74,8 +73,8 @@ const SettingsPage: React.FC = () => {
         // Update user object with new settings
         const updatedUser = { ...user, settings, avatar: avatarUrl };
         
-        // Save to MongoDB
-        const savedUser = await saveUser(updatedUser);
+        // Save to database
+        const savedUser = await browserDb.saveUser(updatedUser);
         
         if (savedUser) {
           // Also update the local state via context
@@ -97,26 +96,10 @@ const SettingsPage: React.FC = () => {
         variant: "destructive"
       });
       
-      // Fall back to localStorage if MongoDB fails
+      // Fall back to localStorage if database fails
       if (user) {
         const updatedUser = { ...user, settings, avatar: avatarUrl };
         updateUser(updatedUser);
-        
-        // Get stored users if any
-        const storedUsers = localStorage.getItem('users');
-        let users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
-        
-        // Find the current user or add it to the array
-        const userIndex = users.findIndex(u => u.id === user.id);
-        
-        if (userIndex >= 0) {
-          users[userIndex] = updatedUser;
-        } else {
-          users.push(updatedUser);
-        }
-        
-        // Save to localStorage
-        localStorage.setItem('users', JSON.stringify(users));
         
         toast({
           title: "Settings saved locally",
@@ -178,9 +161,9 @@ const SettingsPage: React.FC = () => {
               <div className="flex flex-col items-center md:items-start md:flex-row gap-6">
                 <div className="flex flex-col items-center gap-3">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={avatarUrl} alt={settings.displayName || user.username} />
+                    <AvatarImage src={avatarUrl} alt={settings.displayName || user?.username} />
                     <AvatarFallback>
-                      {(settings.displayName || user.username)?.charAt(0).toUpperCase()}
+                      {(settings.displayName || user?.username)?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <Button variant="outline" size="sm" onClick={handleAvatarChange}>

@@ -1,10 +1,7 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, RegistrationRequest } from '../types';
-import { currentUser } from '../data/mockData';
 import { toast } from "@/hooks/use-toast";
-import { saveUser, getUser, getAllUsers } from '../services/mongodb';
-import { connectToMongo } from '../services/mongodb';
+import browserDb from '../services/browserDb';
 
 interface AuthContextProps {
   user: User | null;
@@ -39,27 +36,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [pendingRegistrations, setPendingRegistrations] = useState<RegistrationRequest[]>([]);
   const [dbConnected, setDbConnected] = useState(false);
   
-  // Connect to MongoDB when the app loads
+  // Connect to database when the app loads
   useEffect(() => {
-    const initMongoDB = async () => {
+    const initDb = async () => {
       try {
-        const connected = await connectToMongo();
+        const connected = await browserDb.initialize();
         setDbConnected(connected);
         if (connected) {
-          console.log('MongoDB connected successfully');
+          console.log('Database connected successfully');
         } else {
-          console.warn('MongoDB connection failed, falling back to localStorage');
+          console.warn('Database connection failed, falling back to localStorage');
         }
       } catch (error) {
-        console.error('Error connecting to MongoDB:', error);
+        console.error('Error connecting to database:', error);
         setDbConnected(false);
       }
     };
     
-    initMongoDB();
+    initDb();
   }, []);
   
-  // Try to load user from MongoDB or fall back to localStorage
+  // Try to load user from database or fall back to localStorage
   useEffect(() => {
     const initUser = async () => {
       // Try localStorage first for faster initial load
@@ -68,17 +65,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedUserId) {
         try {
           if (dbConnected) {
-            // Try to get user from MongoDB
-            const mongoUser = await getUser(storedUserId);
+            // Try to get user from database
+            const dbUser = await browserDb.getUser(storedUserId);
             
-            if (mongoUser) {
-              setUser(mongoUser);
+            if (dbUser) {
+              setUser(dbUser);
               setIsAuthenticated(true);
               return;
             }
           }
           
-          // Fall back to localStorage if MongoDB fails or user not found
+          // Fall back to localStorage if database fails or user not found
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
             const parsedUser = JSON.parse(storedUser);
@@ -108,9 +105,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(adminUser));
         localStorage.setItem('currentUserId', adminUser.id);
         
-        // Also save admin to MongoDB if connected
+        // Also save admin to database if connected
         if (dbConnected) {
-          await saveUser(adminUser);
+          await browserDb.saveUser(adminUser);
         }
         return;
       }
@@ -147,9 +144,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(loggedInUser));
       localStorage.setItem('currentUserId', loggedInUser.id);
       
-      // Also save to MongoDB if connected
+      // Also save to database if connected
       if (dbConnected) {
-        await saveUser(loggedInUser);
+        await browserDb.saveUser(loggedInUser);
       }
       
     } catch (error) {
@@ -277,7 +274,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('currentUserId');
   };
   
-  // New function to update user data
+  // Update user data
   const updateUser = async (updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -293,12 +290,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('users', JSON.stringify(updatedUsers));
     }
     
-    // Also save to MongoDB if connected
+    // Also save to database if connected
     if (dbConnected) {
       try {
-        await saveUser(updatedUser);
+        await browserDb.saveUser(updatedUser);
       } catch (error) {
-        console.error('Error saving user to MongoDB:', error);
+        console.error('Error saving user to database:', error);
         toast({
           title: "Database error",
           description: "Failed to save user to database. Changes saved locally only.",
