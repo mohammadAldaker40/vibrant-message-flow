@@ -11,6 +11,9 @@ import Chat from "./pages/Chat";
 import LoginForm from "./components/LoginForm";
 import AdminPanel from "./pages/AdminPanel";
 import SettingsPage from "./pages/Settings";
+import { useEffect, useState } from "react";
+import { connectToMongo } from "./services/mongodb";
+import { toast } from "./hooks/use-toast";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +38,38 @@ const ProtectedRoute: React.FC<{ element: React.ReactNode; adminOnly?: boolean }
 // Auth routes component
 const AuthRoutes: React.FC = () => {
   const { isAuthenticated, login, register, user } = useAuth();
+  const [dbConnected, setDbConnected] = useState(false);
+  
+  // Initialize MongoDB connection
+  useEffect(() => {
+    const initMongoDB = async () => {
+      try {
+        const connected = await connectToMongo();
+        setDbConnected(connected);
+        if (connected) {
+          toast({
+            title: "Database connected",
+            description: "Successfully connected to MongoDB on localhost:27017",
+          });
+        } else {
+          toast({
+            title: "Database connection failed",
+            description: "Failed to connect to MongoDB. Falling back to local storage.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('MongoDB connection error:', error);
+        toast({
+          title: "Database error",
+          description: "Could not connect to MongoDB. Please ensure MongoDB is running on localhost:27017.",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    initMongoDB();
+  }, []);
 
   if (isAuthenticated && user) {
     return (

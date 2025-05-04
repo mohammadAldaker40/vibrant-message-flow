@@ -26,6 +26,7 @@ export interface Message {
   isRead: boolean;
   type: 'text' | 'image' | 'video' | 'file';
   mediaUrl?: string;
+  conversationId?: string; // Added this field to track which conversation a message belongs to
 }
 
 export interface Conversation {

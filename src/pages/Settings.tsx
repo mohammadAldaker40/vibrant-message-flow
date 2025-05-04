@@ -31,11 +31,12 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save, UserRound, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, Save, UserRound, Settings as SettingsIcon, Loader2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
+import { saveUser, updateUserSettings } from '../services/mongodb';
 
 const SettingsPage: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUser } = useAuth();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<UserSettings>({
     theme: 'system',
@@ -46,6 +47,7 @@ const SettingsPage: React.FC = () => {
     bio: ''
   });
   const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
   
   useEffect(() => {
     // Load user settings from local storage if they exist
@@ -64,32 +66,65 @@ const SettingsPage: React.FC = () => {
     }
   }, [user]);
   
-  const handleSaveSettings = () => {
-    if (user) {
-      // Get stored users if any
-      const storedUsers = localStorage.getItem('users');
-      let users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
-      
-      // Find the current user or add it to the array
-      const updatedUser = { ...user, settings, avatar: avatarUrl };
-      const userIndex = users.findIndex(u => u.id === user.id);
-      
-      if (userIndex >= 0) {
-        users[userIndex] = updatedUser;
-      } else {
-        users.push(updatedUser);
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    
+    try {
+      if (user) {
+        // Update user object with new settings
+        const updatedUser = { ...user, settings, avatar: avatarUrl };
+        
+        // Save to MongoDB
+        const savedUser = await saveUser(updatedUser);
+        
+        if (savedUser) {
+          // Also update the local state via context
+          updateUser(updatedUser);
+          
+          toast({
+            title: "Settings saved",
+            description: "Your profile settings have been updated successfully.",
+          });
+        } else {
+          throw new Error("Failed to save settings to database");
+        }
       }
-      
-      // Save to localStorage
-      localStorage.setItem('users', JSON.stringify(users));
-      
-      // Also update the current user in localStorage
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      
+    } catch (error) {
+      console.error('Error saving settings:', error);
       toast({
-        title: "Settings saved",
-        description: "Your profile settings have been updated successfully.",
+        title: "Error saving settings",
+        description: "There was a problem saving your settings. Please try again.",
+        variant: "destructive"
       });
+      
+      // Fall back to localStorage if MongoDB fails
+      if (user) {
+        const updatedUser = { ...user, settings, avatar: avatarUrl };
+        updateUser(updatedUser);
+        
+        // Get stored users if any
+        const storedUsers = localStorage.getItem('users');
+        let users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+        
+        // Find the current user or add it to the array
+        const userIndex = users.findIndex(u => u.id === user.id);
+        
+        if (userIndex >= 0) {
+          users[userIndex] = updatedUser;
+        } else {
+          users.push(updatedUser);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        toast({
+          title: "Settings saved locally",
+          description: "Your settings were saved to local storage as a fallback.",
+        });
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -263,9 +298,22 @@ const SettingsPage: React.FC = () => {
       </Tabs>
       
       <div className="mt-6 flex justify-end">
-        <Button onClick={handleSaveSettings} className="flex items-center gap-2">
-          <Save className="h-4 w-4" />
-          <span>Save Settings</span>
+        <Button 
+          onClick={handleSaveSettings} 
+          className="flex items-center gap-2"
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Saving...</span>
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              <span>Save Settings</span>
+            </>
+          )}
         </Button>
       </div>
     </div>
