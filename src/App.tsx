@@ -10,6 +10,7 @@ import { conversations, messages } from "./data/mockData";
 import Chat from "./pages/Chat";
 import LoginForm from "./components/LoginForm";
 import AdminPanel from "./pages/AdminPanel";
+import SettingsPage from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const AuthRoutes: React.FC = () => {
           <Route path="/" element={<Navigate to="/chat" />} />
           <Route path="/admin" element={<ProtectedRoute element={<AdminPanel />} adminOnly={true} />} />
           <Route path="/chat" element={<ProtectedRoute element={<Chat />} />} />
+          <Route path="/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </SocketProvider>

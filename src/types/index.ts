@@ -6,6 +6,16 @@ export interface User {
   isOnline: boolean;
   isAdmin?: boolean;
   isApproved?: boolean;
+  settings?: UserSettings;
+}
+
+export interface UserSettings {
+  theme?: 'light' | 'dark' | 'system';
+  notifications?: boolean;
+  language?: 'en' | 'es' | 'fr' | 'de';
+  status?: 'available' | 'away' | 'busy' | 'offline';
+  displayName?: string;
+  bio?: string;
 }
 
 export interface Message {

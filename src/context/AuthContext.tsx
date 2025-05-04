@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, RegistrationRequest } from '../types';
 import { currentUser } from '../data/mockData';
@@ -13,6 +12,7 @@ interface AuthContextProps {
   logout: () => void;
   approveRegistration: (id: string) => void;
   rejectRegistration: (id: string) => void;
+  updateUser: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -37,11 +37,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   // Clear any existing user data on load and set admin as default
   useEffect(() => {
-    localStorage.removeItem('user');
-    // You can uncomment this to auto-login as admin for testing
-    // setUser(adminUser);
-    // setIsAuthenticated(true);
-    // localStorage.setItem('user', JSON.stringify(adminUser));
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      setIsAuthenticated(true);
+    } else {
+      localStorage.removeItem('user');
+    }
   }, []);
   
   const login = async (username: string, password: string): Promise<void> => {
@@ -214,6 +217,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('user');
   };
   
+  // New function to update user data
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Update user in users array in localStorage if it exists
+    const storedUsers = localStorage.getItem('users');
+    if (storedUsers) {
+      const users: User[] = JSON.parse(storedUsers);
+      const updatedUsers = users.map(u => 
+        u.id === updatedUser.id ? updatedUser : u
+      );
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+    }
+  };
+  
   // Load pending registrations for admin
   useEffect(() => {
     if (user?.isAdmin) {
@@ -241,7 +260,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       pendingRegistrations,
       approveRegistration,
-      rejectRegistration
+      rejectRegistration,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

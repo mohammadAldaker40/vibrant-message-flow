@@ -5,7 +5,7 @@ import ChatArea from '../components/ChatArea';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users } from 'lucide-react';
+import { LogOut, Users, Settings } from 'lucide-react';
 import Avatar from '../components/Avatar';
 import { useNavigate } from 'react-router-dom';
 
@@ -49,6 +49,15 @@ const Chat: React.FC = () => {
             <h3 className="ml-2 font-medium text-white">{user.username}</h3>
           </div>
           <div className="flex">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate('/settings')} 
+              className="text-gray-300 hover:text-white hover:bg-slate-700 mr-1"
+              title="Settings"
+            >
+              <Settings size={20} />
+            </Button>
             {user.isAdmin && (
               <Button 
                 variant="ghost" 
