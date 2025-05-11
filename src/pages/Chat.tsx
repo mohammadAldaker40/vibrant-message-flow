@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Users, Settings } from 'lucide-react';
 import Avatar from '../components/Avatar';
 import { useNavigate } from 'react-router-dom';
+import { toast } from "@/hooks/use-toast";
 
 const Chat: React.FC = () => {
   const { user, logout } = useAuth();
@@ -22,6 +23,10 @@ const Chat: React.FC = () => {
   useEffect(() => {
     if (conversations.length > 0 && !activeConversationId) {
       setActiveConversationId(conversations[0].id);
+      toast({
+        title: "Conversations loaded",
+        description: `${conversations.length} conversation${conversations.length !== 1 ? 's' : ''} loaded from the database.`,
+      });
     }
   }, [conversations, activeConversationId]);
   

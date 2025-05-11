@@ -10,7 +10,7 @@ interface ChatAreaProps {
   conversation: Conversation | null;
   messages: Message[];
   currentUser: User;
-  onSendMessage: (content: string, type: 'text' | 'image') => void;
+  onSendMessage: (content: string, type: 'text' | 'image', mediaUrl?: string) => void;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -103,7 +103,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           ))
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">No messages yet</p>
+            <p className="text-gray-500">No messages yet. Start the conversation!</p>
           </div>
         )}
         

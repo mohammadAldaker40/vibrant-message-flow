@@ -19,7 +19,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   const { participants, lastMessage, unreadCount, isGroup, groupName, groupAvatar, typing } = conversation;
   
   // For individual chats, get the other participant (not the current user)
-  const otherParticipant = participants.find(p => p.id !== 'user-1');
+  // Assume user-1 is the current user for now, we'll get the actual ID from context in a real app
+  const currentUserId = localStorage.getItem('currentUserId') || 'user-1';
+  const otherParticipant = participants.find(p => p.id !== currentUserId);
   
   const displayName = isGroup ? groupName : otherParticipant?.username;
   const avatarSrc = isGroup ? groupAvatar : otherParticipant?.avatar;
