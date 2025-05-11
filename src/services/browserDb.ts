@@ -1,36 +1,33 @@
 
 import { User, Message, Conversation, UserSettings } from '../types';
+import { database } from '../config/firebase';
+import { 
+  ref, 
+  set, 
+  get, 
+  push, 
+  child, 
+  update, 
+  query, 
+  orderByChild, 
+  equalTo 
+} from 'firebase/database';
 
-// Simple localStorage-based data service as MongoDB replacement
+// Firebase Realtime Database service with localStorage fallback
 class BrowserDb {
   private initialized: boolean = false;
 
-  // Initialize the database with default data if needed
+  // Initialize the database
   async initialize(): Promise<boolean> {
     try {
       if (!this.initialized) {
-        // Initialize users collection if it doesn't exist
-        if (!localStorage.getItem('users')) {
-          localStorage.setItem('users', JSON.stringify([]));
-        }
-        
-        // Initialize messages collection if it doesn't exist
-        if (!localStorage.getItem('messages')) {
-          localStorage.setItem('messages', JSON.stringify([]));
-        }
-        
-        // Initialize conversations collection if it doesn't exist
-        if (!localStorage.getItem('conversations')) {
-          localStorage.setItem('conversations', JSON.stringify([]));
-        }
-        
         this.initialized = true;
-        console.log('BrowserDb initialized');
+        console.log('Firebase Realtime Database initialized');
         return true;
       }
       return this.initialized;
     } catch (error) {
-      console.error('Error initializing BrowserDb:', error);
+      console.error('Error initializing Firebase:', error);
       return false;
     }
   }
@@ -40,27 +37,30 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get existing users
-      const usersJson = localStorage.getItem('users');
-      const users: User[] = usersJson ? JSON.parse(usersJson) : [];
-      
-      // Check if user already exists
-      const userIndex = users.findIndex(u => u.id === user.id);
-      
-      if (userIndex >= 0) {
-        // Update existing user
-        users[userIndex] = user;
-      } else {
-        // Add new user
-        users.push(user);
-      }
-      
-      // Save updated users array
-      localStorage.setItem('users', JSON.stringify(users));
+      // Save user to Firebase
+      await set(ref(database, `users/${user.id}`), user);
       return user;
     } catch (error) {
-      console.error('Error saving user:', error);
-      return null;
+      console.error('Error saving user to Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const usersJson = localStorage.getItem('users');
+        const users: User[] = usersJson ? JSON.parse(usersJson) : [];
+        const userIndex = users.findIndex(u => u.id === user.id);
+        
+        if (userIndex >= 0) {
+          users[userIndex] = user;
+        } else {
+          users.push(user);
+        }
+        
+        localStorage.setItem('users', JSON.stringify(users));
+        return user;
+      } catch (localError) {
+        console.error('Error saving to localStorage fallback:', localError);
+        return null;
+      }
     }
   }
   
@@ -68,17 +68,26 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get users array
-      const usersJson = localStorage.getItem('users');
-      const users: User[] = usersJson ? JSON.parse(usersJson) : [];
+      // Get user from Firebase
+      const snapshot = await get(ref(database, `users/${userId}`));
+      if (snapshot.exists()) {
+        return snapshot.val();
+      }
       
-      // Find user by ID
-      const user = users.find(u => u.id === userId);
-      
-      return user || null;
-    } catch (error) {
-      console.error('Error getting user:', error);
       return null;
+    } catch (error) {
+      console.error('Error getting user from Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const usersJson = localStorage.getItem('users');
+        const users: User[] = usersJson ? JSON.parse(usersJson) : [];
+        const user = users.find(u => u.id === userId);
+        return user || null;
+      } catch (localError) {
+        console.error('Error getting user from localStorage fallback:', localError);
+        return null;
+      }
     }
   }
   
@@ -86,14 +95,29 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get users array
-      const usersJson = localStorage.getItem('users');
-      const users: User[] = usersJson ? JSON.parse(usersJson) : [];
+      // Get all users from Firebase
+      const snapshot = await get(ref(database, 'users'));
+      if (snapshot.exists()) {
+        const users: User[] = [];
+        snapshot.forEach((childSnapshot) => {
+          users.push(childSnapshot.val());
+        });
+        return users;
+      }
       
-      return users;
-    } catch (error) {
-      console.error('Error getting all users:', error);
       return [];
+    } catch (error) {
+      console.error('Error getting all users from Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const usersJson = localStorage.getItem('users');
+        const users: User[] = usersJson ? JSON.parse(usersJson) : [];
+        return users;
+      } catch (localError) {
+        console.error('Error getting users from localStorage fallback:', localError);
+        return [];
+      }
     }
   }
   
@@ -102,26 +126,29 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get users array
-      const usersJson = localStorage.getItem('users');
-      const users: User[] = usersJson ? JSON.parse(usersJson) : [];
-      
-      // Find user index
-      const userIndex = users.findIndex(u => u.id === userId);
-      
-      if (userIndex >= 0) {
-        // Update user settings
-        users[userIndex].settings = settings;
-        
-        // Save updated users array
-        localStorage.setItem('users', JSON.stringify(users));
-        return true;
-      }
-      
-      return false;
+      // Update user settings in Firebase
+      await update(ref(database, `users/${userId}`), { settings });
+      return true;
     } catch (error) {
-      console.error('Error updating user settings:', error);
-      return false;
+      console.error('Error updating user settings in Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const usersJson = localStorage.getItem('users');
+        const users: User[] = usersJson ? JSON.parse(usersJson) : [];
+        const userIndex = users.findIndex(u => u.id === userId);
+        
+        if (userIndex >= 0) {
+          users[userIndex].settings = settings;
+          localStorage.setItem('users', JSON.stringify(users));
+          return true;
+        }
+        
+        return false;
+      } catch (localError) {
+        console.error('Error updating settings in localStorage fallback:', localError);
+        return false;
+      }
     }
   }
   
@@ -130,19 +157,29 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get messages array
-      const messagesJson = localStorage.getItem('messages');
-      const messages: Message[] = messagesJson ? JSON.parse(messagesJson) : [];
+      // Generate a unique key for the message if not provided
+      if (!message.id) {
+        const newMsgRef = push(ref(database, 'messages'));
+        message.id = newMsgRef.key || `msg-${Date.now()}`;
+      }
       
-      // Add new message
-      messages.push(message);
-      
-      // Save updated messages array
-      localStorage.setItem('messages', JSON.stringify(messages));
+      // Save message to Firebase
+      await set(ref(database, `messages/${message.id}`), message);
       return message;
     } catch (error) {
-      console.error('Error saving message:', error);
-      return null;
+      console.error('Error saving message to Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const messagesJson = localStorage.getItem('messages');
+        const messages: Message[] = messagesJson ? JSON.parse(messagesJson) : [];
+        messages.push(message);
+        localStorage.setItem('messages', JSON.stringify(messages));
+        return message;
+      } catch (localError) {
+        console.error('Error saving message to localStorage fallback:', localError);
+        return null;
+      }
     }
   }
   
@@ -150,18 +187,35 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get messages array
-      const messagesJson = localStorage.getItem('messages');
-      const messages: Message[] = messagesJson ? JSON.parse(messagesJson) : [];
+      // Query messages by conversation ID
+      const messagesRef = ref(database, 'messages');
+      const messagesQuery = query(messagesRef, orderByChild('conversationId'), equalTo(conversationId));
+      const snapshot = await get(messagesQuery);
       
-      // Filter messages by conversation ID
-      const conversationMessages = messages.filter(m => m.conversationId === conversationId)
-        .sort((a, b) => a.timestamp - b.timestamp);
+      if (snapshot.exists()) {
+        const messages: Message[] = [];
+        snapshot.forEach((childSnapshot) => {
+          messages.push(childSnapshot.val());
+        });
+        return messages.sort((a, b) => a.timestamp - b.timestamp);
+      }
       
-      return conversationMessages;
-    } catch (error) {
-      console.error('Error getting conversation messages:', error);
       return [];
+    } catch (error) {
+      console.error('Error getting messages from Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const messagesJson = localStorage.getItem('messages');
+        const messages: Message[] = messagesJson ? JSON.parse(messagesJson) : [];
+        const conversationMessages = messages
+          .filter(m => m.conversationId === conversationId)
+          .sort((a, b) => a.timestamp - b.timestamp);
+        return conversationMessages;
+      } catch (localError) {
+        console.error('Error getting messages from localStorage fallback:', localError);
+        return [];
+      }
     }
   }
   
@@ -170,27 +224,30 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get conversations array
-      const conversationsJson = localStorage.getItem('conversations');
-      const conversations: Conversation[] = conversationsJson ? JSON.parse(conversationsJson) : [];
-      
-      // Check if conversation already exists
-      const conversationIndex = conversations.findIndex(c => c.id === conversation.id);
-      
-      if (conversationIndex >= 0) {
-        // Update existing conversation
-        conversations[conversationIndex] = conversation;
-      } else {
-        // Add new conversation
-        conversations.push(conversation);
-      }
-      
-      // Save updated conversations array
-      localStorage.setItem('conversations', JSON.stringify(conversations));
+      // Save conversation to Firebase
+      await set(ref(database, `conversations/${conversation.id}`), conversation);
       return conversation;
     } catch (error) {
-      console.error('Error saving conversation:', error);
-      return null;
+      console.error('Error saving conversation to Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const conversationsJson = localStorage.getItem('conversations');
+        const conversations: Conversation[] = conversationsJson ? JSON.parse(conversationsJson) : [];
+        const conversationIndex = conversations.findIndex(c => c.id === conversation.id);
+        
+        if (conversationIndex >= 0) {
+          conversations[conversationIndex] = conversation;
+        } else {
+          conversations.push(conversation);
+        }
+        
+        localStorage.setItem('conversations', JSON.stringify(conversations));
+        return conversation;
+      } catch (localError) {
+        console.error('Error saving conversation to localStorage fallback:', localError);
+        return null;
+      }
     }
   }
   
@@ -198,18 +255,35 @@ class BrowserDb {
     try {
       await this.initialize();
       
-      // Get conversations array
-      const conversationsJson = localStorage.getItem('conversations');
-      const conversations: Conversation[] = conversationsJson ? JSON.parse(conversationsJson) : [];
+      // Get all conversations from Firebase
+      const snapshot = await get(ref(database, 'conversations'));
+      if (snapshot.exists()) {
+        const conversations: Conversation[] = [];
+        snapshot.forEach((childSnapshot) => {
+          const conversation = childSnapshot.val();
+          // Filter conversations by user ID
+          if (conversation.participants.some((p: any) => p.id === userId)) {
+            conversations.push(conversation);
+          }
+        });
+        return conversations;
+      }
       
-      // Filter conversations by user ID
-      const userConversations = conversations.filter(c => 
-        c.participants.some(p => p.id === userId));
-      
-      return userConversations;
-    } catch (error) {
-      console.error('Error getting user conversations:', error);
       return [];
+    } catch (error) {
+      console.error('Error getting conversations from Firebase:', error);
+      
+      // Fallback to localStorage
+      try {
+        const conversationsJson = localStorage.getItem('conversations');
+        const conversations: Conversation[] = conversationsJson ? JSON.parse(conversationsJson) : [];
+        const userConversations = conversations.filter(c => 
+          c.participants.some(p => p.id === userId));
+        return userConversations;
+      } catch (localError) {
+        console.error('Error getting conversations from localStorage fallback:', localError);
+        return [];
+      }
     }
   }
 }

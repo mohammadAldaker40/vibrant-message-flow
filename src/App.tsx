@@ -14,6 +14,8 @@ import SettingsPage from "./pages/Settings";
 import { useEffect, useState } from "react";
 import browserDb from "./services/browserDb";
 import { toast } from "./hooks/use-toast";
+import { database } from "./config/firebase";
+import { ref, onValue } from "firebase/database";
 
 const queryClient = new QueryClient();
 
@@ -44,17 +46,30 @@ const AuthRoutes: React.FC = () => {
   useEffect(() => {
     const initDb = async () => {
       try {
+        // Test Firebase connection
+        const connectedRef = ref(database, '.info/connected');
+        onValue(connectedRef, (snap) => {
+          if (snap.val() === true) {
+            setDbConnected(true);
+            toast({
+              title: "Firebase connected",
+              description: "Successfully connected to Firebase Realtime Database",
+            });
+          } else {
+            setDbConnected(false);
+            toast({
+              title: "Firebase connection waiting",
+              description: "Attempting to connect to Firebase, falling back to local storage if needed.",
+            });
+          }
+        });
+        
+        // Also initialize our browserDb which handles fallbacks
         const connected = await browserDb.initialize();
-        setDbConnected(connected);
-        if (connected) {
+        if (!connected) {
           toast({
-            title: "Database connected",
-            description: "Successfully connected to local database",
-          });
-        } else {
-          toast({
-            title: "Database connection failed",
-            description: "Failed to connect to database. Falling back to local storage.",
+            title: "Database initialization failed",
+            description: "Failed to initialize database service. Using fallback storage.",
             variant: "destructive"
           });
         }
