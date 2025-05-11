@@ -1,11 +1,14 @@
 
 import { User, Message, Conversation } from '../types';
 
+// Default avatar path
+const DEFAULT_AVATAR = '/lovable-uploads/337fa0f8-332c-4d9b-96ab-cbd5e91e2b56.png';
+
 // Empty arrays for conversations and contacts since we want only admin-approved users
 export const currentUser: User = {
   id: 'user-1',
   username: 'John Doe',
-  avatar: 'https://i.pravatar.cc/150?img=8',
+  avatar: DEFAULT_AVATAR,
   isOnline: true,
   settings: {
     theme: 'system',

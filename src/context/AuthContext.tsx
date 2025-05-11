@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, RegistrationRequest } from '../types';
 import { toast } from "@/hooks/use-toast";
@@ -21,11 +22,14 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Default avatar path
+const DEFAULT_AVATAR = '/lovable-uploads/337fa0f8-332c-4d9b-96ab-cbd5e91e2b56.png';
+
 // Create admin user
 const adminUser: User = {
   id: 'admin-1',
   username: 'admin',
-  avatar: 'https://i.pravatar.cc/150?u=admin',
+  avatar: DEFAULT_AVATAR,
   isOnline: true,
   isAdmin: true
 };
@@ -134,7 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const loggedInUser: User = {
         id: approvedUser.id,
         username: approvedUser.username,
-        avatar: `https://i.pravatar.cc/150?u=${approvedUser.username}`,
+        avatar: DEFAULT_AVATAR,
         isOnline: true,
         isApproved: true
       };

@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { Conversation } from '../types';
-import Avatar from './Avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ConversationItemProps {
   conversation: Conversation;
@@ -19,7 +19,6 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   const { participants, lastMessage, unreadCount, isGroup, groupName, groupAvatar, typing } = conversation;
   
   // For individual chats, get the other participant (not the current user)
-  // Assume user-1 is the current user for now, we'll get the actual ID from context in a real app
   const currentUserId = localStorage.getItem('currentUserId') || 'user-1';
   const otherParticipant = participants.find(p => p.id !== currentUserId);
   
@@ -37,12 +36,21 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       )}
       onClick={onClick}
     >
-      <Avatar 
-        src={avatarSrc || ''} 
-        alt={displayName || ''} 
-        status={isOnline ? 'online' : 'offline'}
-        size="md"
-      />
+      <div className="relative">
+        <Avatar>
+          <AvatarImage src={avatarSrc || '/lovable-uploads/337fa0f8-332c-4d9b-96ab-cbd5e91e2b56.png'} alt={displayName || ''} />
+          <AvatarFallback>{displayName ? displayName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+        </Avatar>
+        
+        {isOnline !== undefined && (
+          <span 
+            className={cn(
+              "absolute bottom-0 right-0 block rounded-full border-2 border-white w-3 h-3",
+              isOnline ? 'bg-green-400' : 'bg-gray-400'
+            )}
+          />
+        )}
+      </div>
       
       <div className="ml-3 flex-grow min-w-0">
         <div className="flex justify-between items-center">

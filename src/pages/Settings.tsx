@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, UserSettings } from '../types';
-import { Avatar } from '../components/ui/avatar';
-import { AvatarImage, AvatarFallback } from '../components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -30,13 +29,16 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save, UserRound, Settings as SettingsIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, UserRound, Settings as SettingsIcon, Loader2, Camera } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import browserDb from '../services/browserDb';
+
+const DEFAULT_AVATAR = '/lovable-uploads/337fa0f8-332c-4d9b-96ab-cbd5e91e2b56.png';
 
 const SettingsPage: React.FC = () => {
   const { user, isAuthenticated, updateUser } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<UserSettings>({
     theme: 'system',
     notifications: true,
@@ -45,7 +47,7 @@ const SettingsPage: React.FC = () => {
     displayName: '',
     bio: ''
   });
-  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [avatarUrl, setAvatarUrl] = useState<string>(DEFAULT_AVATAR);
   const [isSaving, setIsSaving] = useState(false);
   
   useEffect(() => {
@@ -61,7 +63,7 @@ const SettingsPage: React.FC = () => {
         bio: ''
       };
       setSettings(userSettings);
-      setAvatarUrl(user.avatar);
+      setAvatarUrl(user.avatar || DEFAULT_AVATAR);
     }
   }, [user]);
   
@@ -111,11 +113,58 @@ const SettingsPage: React.FC = () => {
     }
   };
   
-  const handleAvatarChange = () => {
-    // In a real implementation, this would open a file picker
-    // For now, we'll just generate a random avatar
-    const randomSeed = Math.floor(Math.random() * 100);
-    setAvatarUrl(`https://i.pravatar.cc/150?img=${randomSeed}`);
+  const handleAvatarClick = () => {
+    // Trigger the hidden file input click
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if the file is an image
+    if (!file.type.match('image.*')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (JPEG, PNG, etc.)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if the file size is less than 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image file smaller than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create a FileReader to read the file as a data URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result) {
+        setAvatarUrl(result);
+        toast({
+          title: "Avatar updated",
+          description: "Don't forget to save your changes",
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  const handleResetAvatar = () => {
+    setAvatarUrl(DEFAULT_AVATAR);
+    toast({
+      title: "Avatar reset",
+      description: "Your avatar has been reset to the default. Don't forget to save your changes.",
+    });
   };
   
   if (!isAuthenticated || !user) {
@@ -160,15 +209,44 @@ const SettingsPage: React.FC = () => {
             <CardContent className="space-y-6">
               <div className="flex flex-col items-center md:items-start md:flex-row gap-6">
                 <div className="flex flex-col items-center gap-3">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={avatarUrl} alt={settings.displayName || user?.username} />
-                    <AvatarFallback>
-                      {(settings.displayName || user?.username)?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button variant="outline" size="sm" onClick={handleAvatarChange}>
-                    Change Avatar
-                  </Button>
+                  <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={avatarUrl} alt={settings.displayName || user?.username} />
+                      <AvatarFallback>
+                        {(settings.displayName || user?.username)?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Camera className="text-white h-8 w-8" />
+                    </div>
+                    
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAvatarClick}
+                    >
+                      Change Avatar
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResetAvatar}
+                    >
+                      Reset
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="w-full space-y-4">
