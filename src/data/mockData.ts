@@ -11,6 +11,7 @@ export const currentUser: User = {
   avatar: DEFAULT_AVATAR,
   isOnline: true,
   blockedUsers: [], // Initialize empty array of blocked users
+  isApproved: true, // Make sure user is approved
   settings: {
     theme: 'system',
     notifications: true,
@@ -21,7 +22,23 @@ export const currentUser: User = {
   }
 };
 
-export const contacts: User[] = [];
+// Adding some sample users for testing
+export const contacts: User[] = [
+  {
+    id: 'user-2',
+    username: 'Jane Smith',
+    avatar: DEFAULT_AVATAR,
+    isOnline: true,
+    isApproved: true
+  },
+  {
+    id: 'user-3',
+    username: 'Bob Johnson',
+    avatar: DEFAULT_AVATAR,
+    isOnline: false,
+    isApproved: true
+  }
+];
 
 export const messages: Record<string, Message[]> = {};
 

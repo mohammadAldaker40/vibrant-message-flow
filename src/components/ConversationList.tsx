@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Conversation, User } from '../types';
 import ConversationItem from './ConversationItem';
 import { Search, Plus, UserPlus, Ban } from 'lucide-react';
@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '../context/AuthContext';
 import { database } from '../config/firebase';
-import { ref, get, query, orderByChild, equalTo, set } from 'firebase/database';
+import { ref, get, query, orderByChild, equalTo, set, push } from 'firebase/database';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from "@/hooks/use-toast";
+import { useSocket } from '../context/SocketContext';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -24,6 +25,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   onSelectConversation,
 }) => {
   const { user } = useAuth();
+  const { conversations: socketConversations } = useSocket();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -46,6 +48,21 @@ const ConversationList: React.FC<ConversationListProps> = ({
     
     return otherParticipant?.username.toLowerCase().includes(searchTerm.toLowerCase());
   });
+  
+  // This effect ensures that when a new conversation is created, it is selected
+  useEffect(() => {
+    if (socketConversations.length > conversations.length) {
+      // A new conversation might have been added
+      const newConversation = socketConversations.find(
+        conv => !conversations.some(c => c.id === conv.id)
+      );
+      
+      if (newConversation) {
+        onSelectConversation(newConversation.id);
+        setSearchDialogOpen(false);
+      }
+    }
+  }, [socketConversations, conversations, onSelectConversation]);
   
   const searchUsers = async () => {
     if (!usernameToSearch.trim()) return;
@@ -92,7 +109,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const startConversation = async (selectedUser: User) => {
     // Check if conversation already exists
     const existingConversation = conversations.find(conv => 
-      conv.participants.some(p => p.id === selectedUser.id) && !conv.isGroup
+      !conv.isGroup && conv.participants.some(p => p.id === selectedUser.id)
     );
     
     if (existingConversation) {
@@ -117,8 +134,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
         await set(ref(database, `conversations/${newConversationId}`), newConversation);
         
         // Select the new conversation
-        onSelectConversation(newConversationId);
-        setSearchDialogOpen(false);
+        // This will be handled by the useEffect that watches for new conversations
         
         toast({
           title: "Conversation created",
