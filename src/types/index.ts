@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   username: string;
@@ -7,6 +6,7 @@ export interface User {
   isAdmin?: boolean;
   isApproved?: boolean;
   settings?: UserSettings;
+  blockedUsers?: string[]; // Array of blocked user IDs
 }
 
 export interface UserSettings {

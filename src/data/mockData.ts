@@ -10,6 +10,7 @@ export const currentUser: User = {
   username: 'John Doe',
   avatar: DEFAULT_AVATAR,
   isOnline: true,
+  blockedUsers: [], // Initialize empty array of blocked users
   settings: {
     theme: 'system',
     notifications: true,
