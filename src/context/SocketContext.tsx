@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Message, Conversation, User } from '../types';
 import { database } from '../config/firebase';
@@ -69,7 +68,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
             snapshot.forEach((childSnapshot) => {
               const conversation = childSnapshot.val();
               // Only include conversations where the current user is a participant
-              if (conversation.participants.some((p: User) => p.id === currentUser.id)) {
+              if (conversation.participants && 
+                  Array.isArray(conversation.participants) && 
+                  conversation.participants.some((p: User) => p && p.id === currentUser.id)) {
                 conversationList.push(conversation);
               }
             });
@@ -109,7 +110,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
             .map((reg: any) => ({
               id: reg.id,
               username: reg.username,
-              avatar: `https://i.pravatar.cc/150?u=${reg.username}`,
+              avatar: '', // No default avatar
               isOnline: false,
               isApproved: true
             }));
@@ -196,9 +197,19 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
     type: 'text' | 'image', 
     mediaUrl?: string
   ) => {
-    if (!conversationId || !content) return;
+    if (!conversationId || !content) {
+      console.error('Missing required parameters:', { conversationId, content });
+      throw new Error('Invalid message parameters');
+    }
     
     try {
+      // Check if the conversation exists
+      const conversation = conversations.find(c => c.id === conversationId);
+      if (!conversation) {
+        console.error('Conversation not found:', conversationId);
+        throw new Error('Conversation not found');
+      }
+      
       // Create a new message
       const newMessageRef = push(ref(database, `messages/${conversationId}`));
       const messageId = newMessageRef.key || `msg-${Date.now()}`;
@@ -217,6 +228,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
       // Save message to Firebase
       await set(ref(database, `messages/${conversationId}/${messageId}`), newMessage);
       
+      // Update local message state immediately for UI responsiveness
+      setMessages(prev => ({
+        ...prev,
+        [conversationId]: [...(prev[conversationId] || []), newMessage]
+      }));
+      
       // Update conversation with last message
       const conversationRef = ref(database, `conversations/${conversationId}`);
       const conversationSnapshot = await get(conversationRef);
@@ -227,6 +244,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
         await update(conversationRef, {
           lastMessage: newMessage
         });
+        
+        // Update local conversation state
+        setConversations(prev => 
+          prev.map(c => c.id === conversationId ? { ...c, lastMessage: newMessage } : c)
+        );
         
         // Simulate a response after a delay (for demo purposes)
         if (type === 'text') {
@@ -239,28 +261,48 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
               
               // Send response after a delay
               setTimeout(async () => {
-                const responseMessageRef = push(ref(database, `messages/${conversationId}`));
-                const responseMessageId = responseMessageRef.key || `msg-${Date.now()}`;
-                
-                const responseMessage: Message = {
-                  id: responseMessageId,
-                  senderId: responder.id,
-                  content: `Thanks for your message: "${content.slice(0, 20)}${content.length > 20 ? '...' : ''}"`,
-                  timestamp: Date.now(),
-                  isRead: true,
-                  type: 'text',
-                  conversationId: conversationId
-                };
-                
-                // Save response to Firebase
-                await set(ref(database, `messages/${conversationId}/${responseMessageId}`), responseMessage);
-                
-                // Update conversation with last message and increment unread count
-                await update(conversationRef, {
-                  lastMessage: responseMessage,
-                  typing: false,
-                  unreadCount: conversation.unreadCount + 1
-                });
+                try {
+                  const responseMessageRef = push(ref(database, `messages/${conversationId}`));
+                  const responseMessageId = responseMessageRef.key || `msg-${Date.now()}`;
+                  
+                  const responseMessage: Message = {
+                    id: responseMessageId,
+                    senderId: responder.id,
+                    content: `Thanks for your message: "${content.slice(0, 20)}${content.length > 20 ? '...' : ''}"`,
+                    timestamp: Date.now(),
+                    isRead: true,
+                    type: 'text',
+                    conversationId: conversationId
+                  };
+                  
+                  // Save response to Firebase
+                  await set(ref(database, `messages/${conversationId}/${responseMessageId}`), responseMessage);
+                  
+                  // Update conversation with last message and increment unread count
+                  await update(conversationRef, {
+                    lastMessage: responseMessage,
+                    typing: false,
+                    unreadCount: conversation.unreadCount + 1
+                  });
+                  
+                  // Update local message state
+                  setMessages(prev => ({
+                    ...prev,
+                    [conversationId]: [...(prev[conversationId] || []), responseMessage]
+                  }));
+                  
+                  // Update local conversation state
+                  setConversations(prev => 
+                    prev.map(c => c.id === conversationId ? { 
+                      ...c, 
+                      lastMessage: responseMessage,
+                      typing: false,
+                      unreadCount: c.unreadCount + 1 
+                    } : c)
+                  );
+                } catch (error) {
+                  console.error('Error sending automated response:', error);
+                }
               }, 2000);
             }
           }, 1000);
@@ -273,6 +315,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({
         description: "Could not send your message. Please try again.",
         variant: "destructive"
       });
+      throw error;
     }
   };
   

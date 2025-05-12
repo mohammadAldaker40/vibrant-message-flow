@@ -40,12 +40,21 @@ const Chat: React.FC = () => {
   
   const handleSendMessage = (content: string, type: 'text' | 'image' = 'text', mediaUrl?: string) => {
     if (activeConversationId && user) {
-      sendMessage(activeConversationId, content, type, mediaUrl);
-      
-      // Simulate typing in response
-      setTimeout(() => {
-        startTyping(activeConversationId);
-      }, 500);
+      try {
+        sendMessage(activeConversationId, content, type, mediaUrl);
+        
+        // Simulate typing in response
+        setTimeout(() => {
+          startTyping(activeConversationId);
+        }, 500);
+      } catch (error) {
+        console.error('Error in Chat.tsx handleSendMessage:', error);
+        toast({
+          title: "Error sending message",
+          description: "Could not send your message. Please try again.",
+          variant: "destructive"
+        });
+      }
     } else {
       toast({
         title: "Cannot send message",

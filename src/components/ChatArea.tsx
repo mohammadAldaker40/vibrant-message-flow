@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, Conversation, User } from '../types';
 import MessageItem from './MessageItem';
@@ -21,6 +20,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onSendMessage,
 }) => {
   const [newMessage, setNewMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -32,7 +32,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   };
   
   const handleSendMessage = () => {
-    if (newMessage.trim()) {
+    if (newMessage.trim() && !isSending) {
+      setIsSending(true);
       try {
         onSendMessage(newMessage, 'text');
         setNewMessage('');
@@ -43,6 +44,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           description: "Something went wrong when sending your message",
           variant: "destructive"
         });
+      } finally {
+        setIsSending(false);
       }
     }
   };
