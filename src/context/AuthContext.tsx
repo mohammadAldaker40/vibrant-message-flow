@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, RegistrationRequest } from '../types';
 import { toast } from "@/hooks/use-toast";
@@ -22,14 +23,11 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Default avatar path
-const DEFAULT_AVATAR = '/lovable-uploads/337fa0f8-332c-4d9b-96ab-cbd5e91e2b56.png';
-
 // Create admin user
 const adminUser: User = {
   id: 'admin-1',
   username: 'admin',
-  avatar: DEFAULT_AVATAR,
+  avatar: '/lovable-uploads/337fa0f8-332c-4d9b-96ab-cbd5e91e2b56.png', // Admin keeps an avatar
   isOnline: true,
   isAdmin: true
 };
@@ -134,11 +132,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Invalid credentials or your registration has not been approved yet');
       }
       
-      // Create user from approved registration
+      // Create user from approved registration - now without default avatar
       const loggedInUser: User = {
         id: approvedUser.id,
         username: approvedUser.username,
-        avatar: DEFAULT_AVATAR,
+        avatar: '', // No default avatar for new users
         isOnline: true,
         isApproved: true
       };
@@ -148,10 +146,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(loggedInUser));
       localStorage.setItem('currentUserId', loggedInUser.id);
       
+      // Save to users array in localStorage if it exists
+      const storedUsers = localStorage.getItem('users');
+      if (storedUsers) {
+        try {
+          const users: User[] = JSON.parse(storedUsers);
+          // Check if user already exists in the array
+          const userExists = users.some(u => u.id === loggedInUser.id);
+          if (!userExists) {
+            const updatedUsers = [...users, loggedInUser];
+            localStorage.setItem('users', JSON.stringify(updatedUsers));
+          }
+        } catch (error) {
+          console.error('Error updating users array:', error);
+        }
+      } else {
+        // If no users array exists, create it
+        localStorage.setItem('users', JSON.stringify([loggedInUser]));
+      }
+      
       // Also save to database if connected
       if (dbConnected) {
         await browserDb.saveUser(loggedInUser);
       }
+      
+      // Show toast about adding profile photo
+      toast({
+        title: "Welcome!",
+        description: "Please add a profile photo in your account settings.",
+      });
       
     } catch (error) {
       console.error('Login failed:', error);

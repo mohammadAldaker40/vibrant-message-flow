@@ -3,17 +3,26 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, LogOut, UserCheck, UserX, UserMinus, Users } from 'lucide-react';
+import { CheckCircle, XCircle, LogOut, UserCheck, UserX, UserMinus, Users, User } from 'lucide-react';
 import { formatDistance } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { User } from '../types';
+import { User as UserType } from '../types';
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const AdminPanel: React.FC = () => {
   const { user, pendingRegistrations, approveRegistration, rejectRegistration, logout } = useAuth();
   const navigate = useNavigate();
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<UserType[]>([]);
 
   // Redirect if not admin
   useEffect(() => {
@@ -28,7 +37,7 @@ const AdminPanel: React.FC = () => {
       const storedUsers = localStorage.getItem('users');
       if (storedUsers) {
         try {
-          const parsedUsers: User[] = JSON.parse(storedUsers);
+          const parsedUsers: UserType[] = JSON.parse(storedUsers);
           // Filter out the current admin user
           setAllUsers(parsedUsers.filter(u => u.id !== user.id));
         } catch (error) {
@@ -45,7 +54,7 @@ const AdminPanel: React.FC = () => {
     const storedUsers = localStorage.getItem('users');
     if (storedUsers) {
       try {
-        const parsedUsers: User[] = JSON.parse(storedUsers);
+        const parsedUsers: UserType[] = JSON.parse(storedUsers);
         // Remove the user to delete
         const updatedUsers = parsedUsers.filter(u => u.id !== userId);
         
@@ -83,6 +92,16 @@ const AdminPanel: React.FC = () => {
   if (!user?.isAdmin) {
     return null;
   }
+
+  // Get user initials for avatar fallback
+  const getUserInitials = (username: string): string => {
+    return username
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -146,16 +165,23 @@ const AdminPanel: React.FC = () => {
                     No pending registration requests
                   </div>
                 ) : (
-                  <div className="divide-y">
-                    {pendingRegistrations.map((request) => (
-                      <div key={request.id} className="py-4 flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium">{request.username}</h3>
-                          <p className="text-sm text-gray-500">{request.email}</p>
-                          <p className="text-xs text-gray-400">
-                            Requested {formatDistance(request.timestamp, Date.now(), { addSuffix: true })}
-                          </p>
-                          <div className="mt-1">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Requested</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingRegistrations.map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell className="font-medium">{request.username}</TableCell>
+                          <TableCell>{request.email}</TableCell>
+                          <TableCell>{formatDistance(request.timestamp, Date.now(), { addSuffix: true })}</TableCell>
+                          <TableCell>
                             {request.status === 'pending' ? (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                                 Pending
@@ -169,31 +195,33 @@ const AdminPanel: React.FC = () => {
                                 Rejected
                               </span>
                             )}
-                          </div>
-                        </div>
-                        {request.status === 'pending' && (
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => approveRegistration(request.id)}
-                              className="text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-900 dark:hover:bg-green-900"
-                            >
-                              <UserCheck className="h-4 w-4 mr-1" /> Approve
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => rejectRegistration(request.id)}
-                              className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-900"
-                            >
-                              <UserX className="h-4 w-4 mr-1" /> Reject
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {request.status === 'pending' && (
+                              <div className="flex justify-end space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => approveRegistration(request.id)}
+                                  className="text-green-600 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-900 dark:hover:bg-green-900"
+                                >
+                                  <UserCheck className="h-4 w-4 mr-1" /> Approve
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => rejectRegistration(request.id)}
+                                  className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-900"
+                                >
+                                  <UserX className="h-4 w-4 mr-1" /> Reject
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
@@ -213,43 +241,80 @@ const AdminPanel: React.FC = () => {
                     No users found
                   </div>
                 ) : (
-                  <div className="divide-y">
-                    {allUsers.map((userItem) => (
-                      <div key={userItem.id} className="py-4 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full overflow-hidden mr-3 bg-gray-200 dark:bg-gray-700">
-                            <img 
-                              src={userItem.avatar || '/placeholder.svg'} 
-                              alt={userItem.username} 
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">{userItem.username}</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {userItem.isOnline ? (
-                                <span className="flex items-center">
-                                  <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span> Online
-                                </span>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Settings</TableHead>
+                        <TableHead>Blocked Users</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allUsers.map((userItem) => (
+                        <TableRow key={userItem.id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar>
+                                {userItem.avatar ? (
+                                  <AvatarImage src={userItem.avatar} alt={userItem.username} />
+                                ) : (
+                                  <AvatarFallback>{getUserInitials(userItem.username)}</AvatarFallback>
+                                )}
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{userItem.username}</p>
+                                <p className="text-xs text-muted-foreground">ID: {userItem.id.substring(0, 8)}...</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {userItem.isOnline ? (
+                              <span className="flex items-center">
+                                <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span> Online
+                              </span>
+                            ) : (
+                              <span className="flex items-center">
+                                <span className="h-2 w-2 rounded-full bg-gray-400 mr-1"></span> Offline
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {userItem.settings ? (
+                                <>
+                                  <p>Theme: {userItem.settings.theme || 'Default'}</p>
+                                  <p>Status: {userItem.settings?.status || 'Default'}</p>
+                                </>
                               ) : (
-                                <span className="flex items-center">
-                                  <span className="h-2 w-2 rounded-full bg-gray-400 mr-1"></span> Offline
-                                </span>
+                                <span className="text-gray-500">No settings</span>
                               )}
-                            </p>
-                          </div>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleDeleteUser(userItem.id)}
-                          className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-900"
-                        >
-                          <UserMinus className="h-4 w-4 mr-1" /> Delete User
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {userItem.blockedUsers && userItem.blockedUsers.length > 0 ? (
+                              <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">
+                                {userItem.blockedUsers.length} blocked
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">None</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDeleteUser(userItem.id)}
+                              className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-900"
+                            >
+                              <UserMinus className="h-4 w-4 mr-1" /> Delete User
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
