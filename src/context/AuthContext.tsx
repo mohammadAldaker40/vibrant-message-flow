@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, RegistrationRequest } from '../types';
 import { toast } from "@/hooks/use-toast";
@@ -14,6 +13,7 @@ interface AuthContextProps {
   approveRegistration: (id: string) => void;
   rejectRegistration: (id: string) => void;
   updateUser: (updatedUser: User) => void;
+  deleteUser?: (userId: string) => Promise<boolean>; // Adding delete function
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
