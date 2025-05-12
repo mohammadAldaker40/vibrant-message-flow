@@ -46,6 +46,12 @@ const Chat: React.FC = () => {
       setTimeout(() => {
         startTyping(activeConversationId);
       }, 500);
+    } else {
+      toast({
+        title: "Cannot send message",
+        description: activeConversationId ? "User information missing" : "No active conversation selected",
+        variant: "destructive"
+      });
     }
   };
   

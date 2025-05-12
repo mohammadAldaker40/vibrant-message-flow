@@ -5,6 +5,7 @@ import MessageItem from './MessageItem';
 import Avatar from './Avatar';
 import { Button } from '@/components/ui/button';
 import { Paperclip, Mic, Send, Image, Smile } from 'lucide-react';
+import { toast } from "@/hooks/use-toast";
 
 interface ChatAreaProps {
   conversation: Conversation | null;
@@ -32,8 +33,17 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   
   const handleSendMessage = () => {
     if (newMessage.trim()) {
-      onSendMessage(newMessage, 'text');
-      setNewMessage('');
+      try {
+        onSendMessage(newMessage, 'text');
+        setNewMessage('');
+      } catch (error) {
+        console.error("Error sending message:", error);
+        toast({
+          title: "Error sending message",
+          description: "Something went wrong when sending your message",
+          variant: "destructive"
+        });
+      }
     }
   };
   

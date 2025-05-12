@@ -9,6 +9,7 @@ export const currentUser: User = {
   isOnline: true,
   blockedUsers: [], // Initialize empty array of blocked users
   isApproved: true, // Make sure user is approved
+  isAdmin: true, // Ensure admin privileges
   settings: {
     theme: 'system',
     notifications: true,
@@ -26,17 +27,54 @@ export const contacts: User[] = [
     username: 'Jane Smith',
     avatar: '', // No default avatar
     isOnline: true,
-    isApproved: true
+    isApproved: true,
+    blockedUsers: [],
+    settings: {
+      theme: 'light',
+      notifications: true,
+      language: 'en',
+      status: 'available',
+      displayName: 'Jane',
+      bio: 'Hi there!'
+    }
   },
   {
     id: 'user-3',
     username: 'Bob Johnson',
     avatar: '', // No default avatar
     isOnline: false,
-    isApproved: true
+    isApproved: true,
+    blockedUsers: [],
+    settings: {
+      theme: 'dark',
+      notifications: false,
+      language: 'en',
+      status: 'busy',
+      displayName: 'Bob',
+      bio: 'Working...'
+    }
   }
 ];
 
+// Initialize empty message storage
 export const messages: Record<string, Message[]> = {};
 
-export const conversations: Conversation[] = [];
+// Initialize with sample conversations
+export const conversations: Conversation[] = [
+  {
+    id: 'conversation-1',
+    participants: [currentUser, contacts[0]],
+    unreadCount: 0,
+    isGroup: false,
+    typing: false,
+    lastMessage: undefined
+  },
+  {
+    id: 'conversation-2',
+    participants: [currentUser, contacts[1]],
+    unreadCount: 0,
+    isGroup: false,
+    typing: false,
+    lastMessage: undefined
+  }
+];
